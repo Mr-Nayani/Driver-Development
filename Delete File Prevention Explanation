@@ -1,0 +1,50 @@
+This code is a Windows kernel-mode driver that implements a file deletion filter. It intercepts file delete operations and logs the path of the deleted file.
+Let's break down the code into different sections:
+
+
+  **Header inclusion:**
+ntifs.h includes various NT kernel mode definitions and functions.
+fltKernel.h includes Filter Manager definitions and functions.
+
+  ** Function prototypes: **
+DriverEntry: Entry point function for the driver.
+FileDeleteDriverUnload: Driver unload callback function.
+FileDeleteFilterPreOperation: Pre-operation callback for file delete operations.
+FileDeleteFilterUnload: Unload callback for the minifilter.
+
+  **Global variables:**
+Callbacks[]: Array of operation callbacks, only contains one entry for "IRP_MJ_SET_INFORMATION" major function.
+The callback is registered to be called before any set information operation on a file object.
+The actual implementation is in the FileDeleteFilterPreOperation function defined later in the code.
+This allows interception of file delete operations specifically when setting certain information (e.g., deleting files).
+Filter registration:
+c
+Copy code
+
+const FLT_REGISTRATION FilterRegistration = {
+    sizeof(FLT_REGISTRATION),
+    FLT_REGISTRATION_VERSION,
+    0,
+    NULL,
+    Callbacks,
+    FileDeleteFilterUnload,
+    NULL // InstanceSetupCallback is not used
+};
+
+This structure defines how our minifilter interacts with Filter Manager by providing necessary details like version, callbacks, etc.
+Driver entry point (DriverEntry) implementation:
+Registers our minifilter using FltRegisterFilter function provided by Filter Manager API.
+If registration succeeds, starts filtering I/O operations using FltStartFiltering function.
+  
+Sets up driver unload callback (FileDeleteDriverUnload) to be called when the driver is unloaded.
+
+If any of these steps fail, appropriate error messages are printed.
+
+Pre-operation callback (FileDeleteFilterPreOperation) implementation:
+
+This callback intercepts file delete operations and logs the path of deleted files.
+It checks if the operation is a set information operation and whether it's setting file disposition information (i.e., deleting a file).
+If so, it extracts the path from FltObjects->FileObject -> FileName and logs it.
+Filter unload callback (FileDeleteFilterUnload) implementation:
+Unregisters the minifilter using FltUnregisterFilter function when called.
+Driver unload callback (FileDeleteDriverUnload) implementation: The empty function just serves as a placeholder for future use.
